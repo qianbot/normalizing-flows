@@ -16,6 +16,7 @@ from .affine.coupling import (
     AffineCouplingBlock,
 )
 from .affine.glow import GlowBlock
+from .affine.conditional_glow import ConditionalGlowBlock
 from .affine.autoregressive import MaskedAffineAutoregressive
 
 from .normalization import BatchNorm, ActNorm

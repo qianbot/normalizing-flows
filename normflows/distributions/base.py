@@ -641,8 +641,8 @@ class GaussianMixture(BaseDistribution):
         log_p = torch.logsumexp(log_p, 1)
 
         return z, log_p
-
-    def log_prob(self, z):
+    # TODO: not finished
+    def log_prob(self, z, context=None):
         # Get weights
         weights = torch.softmax(self.weight_scores, 1)
 

@@ -314,7 +314,12 @@ class ConditionalNormalizingFlow(NormalizingFlow):
         for i in range(len(self.flows) - 1, -1, -1):
             z, log_det = self.flows[i].inverse(z, context=context)
             log_q += log_det
-        log_q += self.q0.log_prob(z, context=context)
+        # for the case where we only have condition for transforms but not
+        # to base distribution
+        if context is None:
+            log_q += self.q0.log_prob(z)
+        else:
+            log_q += self.q0.log_prob(z, context=context)
         return log_q
 
     def forward_kld(self, x, context=None):

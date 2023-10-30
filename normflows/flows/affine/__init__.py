@@ -13,5 +13,6 @@ from .coupling import (
 )
 
 from .glow import GlowBlock
+from .conditional_glow import ConditionalGlowBlock
 
 from .autoregressive import MaskedAffineAutoregressive

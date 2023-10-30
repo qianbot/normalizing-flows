@@ -20,8 +20,8 @@ class ConditionalGlowBlock(Flow):
 
     def __init__(
         self,
-        channels,
-        hidden_channels,
+        input_dim,
+        hidden_dim,
         context_feature,
         num_blocks,
         scale=True,
@@ -51,6 +51,8 @@ class ConditionalGlowBlock(Flow):
         # Coupling layer -> TODO: Do we need this???
         kernel_size = (3, 1, 3)
         num_param = 2 if scale else 1
+        channels = 1
+        hidden_channels = 1
         if "channel" == split_mode:
             channels_ = ((channels + 1) // 2,) + 2 * (hidden_channels,)
             channels_ += (num_param * (channels // 2),)
@@ -67,11 +69,12 @@ class ConditionalGlowBlock(Flow):
         # param_map = nets.ConvNet2d(
         #     channels_, kernel_size, leaky, init_zeros, actnorm=net_actnorm
         # )
-        param_map = nets.ResidualNet(in_features=channels, out_features=channels, hidden_features=hidden_channels,
+        param_map = nets.ResidualNet(in_features=input_dim, out_features=input_dim, hidden_features=hidden_dim,
                                      context_features=context_feature, num_blocks=num_blocks)
 
         self.flows += [AffineCouplingBlock(param_map, scale, scale_map, split_mode)]
         # Invertible 1x1 convolution
+        # TODO: why here?
         if channels > 1:
             self.flows += [Invertible1x1Conv(channels, use_lu)]
         # Activation normalization
