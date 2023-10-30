@@ -49,7 +49,6 @@ class ConditionalGlowBlock(Flow):
         self.flows = nn.ModuleList([])
 
         # Coupling layer -> TODO: Do we need this???
-        kernel_size = (3, 1, 3)
         num_param = 2 if scale else 1
         channels = 1
         hidden_channels = 1

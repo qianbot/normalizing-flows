@@ -2,6 +2,7 @@ from . import (
     autoregressive,
     coupling,
     glow,
+    conditional_glow
 )
 
 from .coupling import (
