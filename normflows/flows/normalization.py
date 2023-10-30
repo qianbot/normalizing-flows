@@ -16,7 +16,7 @@ class ActNorm(AffineConstFlow):
         self.data_dep_init_done_cpu = torch.tensor(0.0)
         self.register_buffer("data_dep_init_done", self.data_dep_init_done_cpu)
 
-    def forward(self, z):
+    def forward(self, z, context=None):
         # first batch is used for initialization, c.f. batchnorm
         if not self.data_dep_init_done > 0.0:
             assert self.s is not None and self.t is not None
@@ -28,7 +28,7 @@ class ActNorm(AffineConstFlow):
             self.data_dep_init_done = torch.tensor(1.0)
         return super().forward(z)
 
-    def inverse(self, z):
+    def inverse(self, z, context=None):
         # first batch is used for initialization, c.f. batchnorm
         if not self.data_dep_init_done:
             assert self.s is not None and self.t is not None

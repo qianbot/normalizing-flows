@@ -320,7 +320,7 @@ class ConditionalNormalizingFlow(NormalizingFlow):
             log_q += self.q0.log_prob(z)
         else:
             log_q += self.q0.log_prob(z, context=context)
-        return log_q
+        return log_q, z
 
     def forward_kld(self, x, context=None):
         """Estimates forward KL divergence, see [arXiv 1912.02762](https://arxiv.org/abs/1912.02762)

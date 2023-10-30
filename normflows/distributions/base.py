@@ -613,7 +613,7 @@ class GaussianMixture(BaseDistribution):
             self.register_buffer("log_scale", torch.tensor(np.log(1.0 * scale)))
             self.register_buffer("weight_scores", torch.tensor(np.log(1.0 * weights)))
 
-    def forward(self, num_samples=1):
+    def forward(self, num_samples=1, context=None):
         # Get weights
         weights = torch.softmax(self.weight_scores, 1)
 
@@ -622,14 +622,23 @@ class GaussianMixture(BaseDistribution):
         mode_1h = nn.functional.one_hot(mode, self.n_modes)
         mode_1h = mode_1h[..., None]
 
-        # Get samples
-        eps_ = torch.randn(
-            num_samples, self.dim, dtype=self.loc.dtype, device=self.loc.device
-        )
-        scale_sample = torch.sum(torch.exp(self.log_scale) * mode_1h, 1)
-        loc_sample = torch.sum(self.loc * mode_1h, 1)
-        z = eps_ * scale_sample + loc_sample
+        if context == None:
+            raise NotImplementedError('sample from GMM with empty context is not implemented')
+        else:
+            # The value of the context is ignored, only its size and device are taken into account.
+            context_size = context.shape[0]
 
+            # Get samples
+            eps_ = torch.randn(
+                num_samples * context_size, self.dim, dtype=self.loc.dtype, device=self.loc.device
+            )
+            scale_sample = torch.sum(torch.exp(self.log_scale) * mode_1h, 1)
+            loc_sample = torch.sum(self.loc * mode_1h, 1)
+            z = eps_ * scale_sample + loc_sample # z (batch_size, feat_dim)
+            # expand z to (batch_size, 1, feat_dim)
+            z = z[:,None,:]
+
+        # TODO: check if log computation is correct
         # Compute log probability
         eps = (z[:, None, :] - self.loc) / torch.exp(self.log_scale)
         log_p = (

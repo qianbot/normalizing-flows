@@ -77,18 +77,19 @@ class ConditionalGlowBlock(Flow):
         if channels > 1:
             self.flows += [Invertible1x1Conv(channels, use_lu)]
         # Activation normalization
-        self.flows += [ActNorm((channels,) + (1, 1))]
+        # Modified according to glow in nflow
+        self.flows += [ActNorm([input_dim])]
 
-    def forward(self, z):
+    def forward(self, z, context=None):
         log_det_tot = torch.zeros(z.shape[0], dtype=z.dtype, device=z.device)
         for flow in self.flows:
-            z, log_det = flow(z)
+            z, log_det = flow(z, context)
             log_det_tot += log_det
         return z, log_det_tot
 
-    def inverse(self, z):
+    def inverse(self, z, context=None):
         log_det_tot = torch.zeros(z.shape[0], dtype=z.dtype, device=z.device)
         for i in range(len(self.flows) - 1, -1, -1):
-            z, log_det = self.flows[i].inverse(z)
+            z, log_det = self.flows[i].inverse(z, context)
             log_det_tot += log_det
         return z, log_det_tot
