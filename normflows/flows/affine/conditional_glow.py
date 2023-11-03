@@ -52,17 +52,6 @@ class ConditionalGlowBlock(Flow):
         num_param = 2 if scale else 1
         channels = 1
         hidden_channels = 1
-        if "channel" == split_mode:
-            channels_ = ((channels + 1) // 2,) + 2 * (hidden_channels,)
-            channels_ += (num_param * (channels // 2),)
-        elif "channel_inv" == split_mode:
-            channels_ = (channels // 2,) + 2 * (hidden_channels,)
-            channels_ += (num_param * ((channels + 1) // 2),)
-        elif "checkerboard" in split_mode:
-            channels_ = (channels,) + 2 * (hidden_channels,)
-            channels_ += (num_param * channels,)
-        else:
-            raise NotImplementedError("Mode " + split_mode + " is not implemented.")
 
         # TODO: Replace Conv2d with residualnet
         # param_map = nets.ConvNet2d(
@@ -73,9 +62,7 @@ class ConditionalGlowBlock(Flow):
 
         self.flows += [AffineCouplingBlock(param_map, scale, scale_map, split_mode)]
         # Invertible 1x1 convolution
-        # TODO: why here?
-        if channels > 1:
-            self.flows += [Invertible1x1Conv(channels, use_lu)]
+        self.flows += [Invertible1x1Conv(channels, use_lu)]
         # Activation normalization
         # Modified according to glow in nflow
         self.flows += [ActNorm([input_dim])]
