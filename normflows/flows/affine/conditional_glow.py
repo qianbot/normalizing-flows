@@ -3,10 +3,27 @@ from torch import nn
 
 from ..base import Flow
 from .coupling import AffineCouplingBlock
-from ..mixing import Invertible1x1Conv
+from ..mixing import InvertibleAffine
 from ..normalization import ActNorm
 from ... import nets
 
+
+def merge_leading_dims(x, num_dims):
+    """Reshapes the tensor `x` such that the first `num_dims` dimensions are merged to one."""
+    if num_dims > x.dim():
+        raise ValueError(
+            "Number of leading dims can't be greater than total number of dims."
+        )
+    new_shape = torch.Size([-1]) + x.shape[num_dims:]
+    return torch.reshape(x, new_shape)
+
+
+def repeat_rows(x, num_reps):
+    """Each row of tensor `x` is repeated `num_reps` times along leading dimension."""
+    shape = x.shape
+    x = x.unsqueeze(1)
+    x = x.expand(shape[0], num_reps, *shape[1:])
+    return merge_leading_dims(x, num_dims=2)
 
 class ConditionalGlowBlock(Flow):
     """Glow: Generative Flow with Invertible 1×1 Convolutions, [arXiv: 1807.03039](https://arxiv.org/abs/1807.03039)
@@ -50,33 +67,52 @@ class ConditionalGlowBlock(Flow):
 
         # Coupling layer -> TODO: Do we need this???
         num_param = 2 if scale else 1
-        channels = 1
-        hidden_channels = 1
-
-        # TODO: Replace Conv2d with residualnet
-        # param_map = nets.ConvNet2d(
-        #     channels_, kernel_size, leaky, init_zeros, actnorm=net_actnorm
-        # )
-        param_map = nets.ResidualNet(in_features=input_dim, out_features=input_dim, hidden_features=hidden_dim,
+        channels = input_dim
+        hidden_channels = hidden_dim
+        if "channel" == split_mode:
+            channels_ = ((channels + 1) // 2,) + 2 * (hidden_channels,)
+            channels_ += (num_param * (channels // 2),)
+        elif "channel_inv" == split_mode:
+            channels_ = (channels // 2,) + 2 * (hidden_channels,)
+            channels_ += (num_param * ((channels + 1) // 2),)
+        elif "checkerboard" in split_mode:
+            channels_ = (channels,) + 2 * (hidden_channels,)
+            channels_ += (num_param * channels,)
+        else:
+            raise NotImplementedError("Mode " + split_mode + " is not implemented.")
+        # Because we don't use multi scale so first value from chennels_ is enough for us to use
+        param_map = nets.ResidualNet(in_features=channels_[0], out_features=input_dim, hidden_features=hidden_dim,
                                      context_features=context_feature, num_blocks=num_blocks)
 
         self.flows += [AffineCouplingBlock(param_map, scale, scale_map, split_mode)]
         # Invertible 1x1 convolution
-        self.flows += [Invertible1x1Conv(channels, use_lu)]
+        self.flows += [InvertibleAffine(input_dim, use_lu)]
         # Activation normalization
         # Modified according to glow in nflow
         self.flows += [ActNorm([input_dim])]
 
     def forward(self, z, context=None):
         log_det_tot = torch.zeros(z.shape[0], dtype=z.dtype, device=z.device)
+        if z.shape[0] != context.shape[0]:
+            context = repeat_rows(context, num_reps=z.shape[0]//context.shape[0])
         for flow in self.flows:
-            z, log_det = flow(z, context)
+            if str(flow) == 'ActNorm()':
+                z, log_det = flow(z)
+            elif str(flow) == 'InvertibleAffine()':
+                z, log_det = flow(z)
+            else:
+                z, log_det = flow(z, context)
             log_det_tot += log_det
         return z, log_det_tot
 
     def inverse(self, z, context=None):
         log_det_tot = torch.zeros(z.shape[0], dtype=z.dtype, device=z.device)
         for i in range(len(self.flows) - 1, -1, -1):
-            z, log_det = self.flows[i].inverse(z, context)
+            if str(self.flows[i]) == 'ActNorm()':
+                z, log_det = self.flows[i].inverse(z)
+            elif str(self.flows[i]) == 'InvertibleAffine()':
+                z, log_det = self.flows[i].inverse(z)
+            else:
+                z, log_det = self.flows[i].inverse(z, context)
             log_det_tot += log_det
         return z, log_det_tot

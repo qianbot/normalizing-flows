@@ -114,7 +114,7 @@ class AffineCoupling(Flow):
         self.scale = scale
         self.scale_map = scale_map
 
-    def forward(self, z):
+    def forward(self, z, context=None):
         """
         z is a list of z1 and z2; ```z = [z1, z2]```
         z1 is left constant and affine map is applied to z2 with parameters depending
@@ -124,7 +124,7 @@ class AffineCoupling(Flow):
           z
         """
         z1, z2 = z
-        param = self.param_map(z1)
+        param = self.param_map(z1, context)
         if self.scale:
             shift = param[:, 0::2, ...]
             scale_ = param[:, 1::2, ...]
@@ -146,9 +146,9 @@ class AffineCoupling(Flow):
             log_det = zero_log_det_like_z(z2)
         return [z1, z2], log_det
 
-    def inverse(self, z):
+    def inverse(self, z, context=None):
         z1, z2 = z
-        param = self.param_map(z1)
+        param = self.param_map(z1,context)
         if self.scale:
             shift = param[:, 0::2, ...]
             scale_ = param[:, 1::2, ...]
@@ -255,13 +255,24 @@ class AffineCouplingBlock(Flow):
     def forward(self, z, context=None):
         log_det_tot = torch.zeros(z.shape[0], dtype=z.dtype, device=z.device)
         for flow in self.flows:
-            z, log_det = flow(z)
+            if str(flow) == 'Merge()':
+                z, log_det = flow(z)
+            elif str(flow) == 'Split()':
+                z, log_det = flow(z)
+            else:
+                z, log_det = flow(z, context)
             log_det_tot += log_det
         return z, log_det_tot
 
     def inverse(self, z, context=None):
         log_det_tot = torch.zeros(z.shape[0], dtype=z.dtype, device=z.device)
         for i in range(len(self.flows) - 1, -1, -1):
-            z, log_det = self.flows[i].inverse(z)
+            if str(self.flows[i]) == 'Merge()':
+                z, log_det = self.flows[i].inverse(z)
+            elif str(self.flows[i]) == 'Split()':
+                z, log_det = self.flows[i].inverse(z)
+            else:
+                z, log_det = self.flows[i].inverse(z, context)
+
             log_det_tot += log_det
         return z, log_det_tot

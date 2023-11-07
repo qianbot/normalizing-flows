@@ -635,8 +635,6 @@ class GaussianMixture(BaseDistribution):
             scale_sample = torch.sum(torch.exp(self.log_scale) * mode_1h, 1)
             loc_sample = torch.sum(self.loc * mode_1h, 1)
             z = eps_ * scale_sample + loc_sample # z (batch_size, feat_dim)
-            # expand z to (batch_size, 1, feat_dim)
-            z = z[:,None,:]
 
         # TODO: check if log computation is correct
         # Compute log probability
