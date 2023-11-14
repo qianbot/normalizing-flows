@@ -4,6 +4,16 @@ import numpy as np
 
 from .. import flows
 
+# torchutils from nflows package
+def sum_except_batch(x, num_batch_dims=1):
+    """Sums all elements of `x` except for the first `num_batch_dims` dimensions."""
+    reduce_dims = list(range(num_batch_dims, x.ndimension()))
+    return torch.sum(x, dim=reduce_dims)
+
+def split_leading_dim(x, shape):
+    """Reshapes the leading dim of `x` to have the given shape."""
+    new_shape = torch.Size(shape) + x.shape[1:]
+    return torch.reshape(x, new_shape)
 
 class BaseDistribution(nn.Module):
     """
@@ -664,6 +674,51 @@ class GaussianMixture(BaseDistribution):
         log_p = torch.logsumexp(log_p, 1)
 
         return log_p
+
+
+class StandardNormal(BaseDistribution):
+    """A multivariate Normal with zero mean and unit covariance."""
+
+    def __init__(self, shape):
+        super().__init__()
+        self._shape = torch.Size(shape)
+
+        self.register_buffer("_log_z",
+                             torch.tensor(0.5 * np.prod(shape) * np.log(2 * np.pi),
+                                          dtype=torch.float64),
+                             persistent=False)
+
+    def log_prob(self, inputs, context):
+        # Note: the context is ignored.
+        if inputs.shape[1:] != self._shape:
+            raise ValueError(
+                "Expected input of shape {}, got {}".format(
+                    self._shape, inputs.shape[1:]
+                )
+            )
+        neg_energy = -0.5 * \
+            sum_except_batch(inputs ** 2, num_batch_dims=1)
+        return neg_energy - self._log_z
+
+    def forward(self, num_samples=1, context=None):
+        if context is None:
+            raise NotImplementedError('context is needed for forward in standardnorm')
+            return torch.randn(num_samples, *self._shape, device=self._log_z.device)
+        else:
+            # The value of the context is ignored, only its size and device are taken into account.
+            context_size = context.shape[0]
+            samples = torch.randn(context_size * num_samples, *self._shape,
+                                  device=context.device)
+            neg_energy = -0.5 * \
+                sum_except_batch(samples ** 2, num_batch_dims=1)
+            return split_leading_dim(samples, [context_size, num_samples]), neg_energy - self._log_z
+
+    def _mean(self, context):
+        if context is None:
+            return self._log_z.new_zeros(self._shape)
+        else:
+            # The value of the context is ignored, only its size is taken into account.
+            return context.new_zeros(context.shape[0], *self._shape)
 
 
 class GaussianPCA(BaseDistribution):

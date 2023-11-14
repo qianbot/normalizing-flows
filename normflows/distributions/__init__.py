@@ -17,6 +17,7 @@ from .base import (
     GaussianMixture,
     GaussianPCA,
     UniformGaussian,
+    StandardNormal,
 )
 from .target import (
     Target,
