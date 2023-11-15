@@ -681,7 +681,7 @@ class StandardNormal(BaseDistribution):
 
     def __init__(self, shape):
         super().__init__()
-        self._shape = torch.Size(shape)
+        self._shape = torch.Size([shape])
 
         self.register_buffer("_log_z",
                              torch.tensor(0.5 * np.prod(shape) * np.log(2 * np.pi),
@@ -711,7 +711,9 @@ class StandardNormal(BaseDistribution):
                                   device=context.device)
             neg_energy = -0.5 * \
                 sum_except_batch(samples ** 2, num_batch_dims=1)
-            return split_leading_dim(samples, [context_size, num_samples]), neg_energy - self._log_z
+            samples = split_leading_dim(samples, [context_size, num_samples])
+            samples = torch.squeeze(samples)
+            return samples, neg_energy - self._log_z
 
     def _mean(self, context):
         if context is None:
