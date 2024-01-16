@@ -688,7 +688,7 @@ class StandardNormal(BaseDistribution):
                                           dtype=torch.float64),
                              persistent=False)
 
-    def log_prob(self, inputs, context):
+    def log_prob(self, inputs, context=None):
         # Note: the context is ignored.
         if inputs.shape[1:] != self._shape:
             raise ValueError(
@@ -701,19 +701,18 @@ class StandardNormal(BaseDistribution):
         return neg_energy - self._log_z
 
     def forward(self, num_samples=1, context=None):
-        if context is None:
-            raise NotImplementedError('context is needed for forward in standardnorm')
-            return torch.randn(num_samples, *self._shape, device=self._log_z.device)
-        else:
-            # The value of the context is ignored, only its size and device are taken into account.
-            context_size = context.shape[0]
-            samples = torch.randn(context_size * num_samples, *self._shape,
-                                  device=context.device)
-            neg_energy = -0.5 * \
-                sum_except_batch(samples ** 2, num_batch_dims=1)
-            samples = split_leading_dim(samples, [context_size, num_samples])
-            samples = torch.squeeze(samples)
-            return samples, neg_energy - self._log_z
+        # raise NotImplementedError('context is needed for forward in standardnorm')
+        return torch.randn(num_samples, *self._shape, device=self._log_z.device)
+        # else:
+        # # The value of the context is ignored, only its size and device are taken into account.
+        # context_size = context.shape[0]
+        # samples = torch.randn(context_size * num_samples, *self._shape,
+        #                       device=context.device)
+        # neg_energy = -0.5 * \
+        #     sum_except_batch(samples ** 2, num_batch_dims=1)
+        # samples = split_leading_dim(samples, [context_size, num_samples])
+        # samples = torch.squeeze(samples)
+        # return samples, neg_energy - self._log_z
 
     def _mean(self, context):
         if context is None:

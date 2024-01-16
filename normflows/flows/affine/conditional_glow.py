@@ -26,13 +26,13 @@ def repeat_rows(x, num_reps):
     return merge_leading_dims(x, num_dims=2)
 
 class ConditionalGlowBlock(Flow):
-    """Glow: Generative Flow with Invertible 1×1 Convolutions, [arXiv: 1807.03039](https://arxiv.org/abs/1807.03039)
+    """Glow: Generative Flow with Invertible 1x1 Convolutions, [arXiv: 1807.03039](https://arxiv.org/abs/1807.03039)
 
     One Block of the Glow model, comprised of
 
     - MaskedAffineFlow (affine coupling layer)
     - Invertible1x1Conv (dropped if there is only one channel)
-    - ActNorm (first batch used for initialization)
+    - ActNorm (first batch used for initialization)s
     """
 
     def __init__(

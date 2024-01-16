@@ -12,6 +12,7 @@ from .base import (
     BaseDistribution,
     DiagGaussian,
     ClassCondDiagGaussian,
+    ConditionalDiagGaussian,
     GlowBase,
     AffineGaussian,
     GaussianMixture,
