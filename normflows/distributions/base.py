@@ -702,17 +702,23 @@ class StandardNormal(BaseDistribution):
 
     def forward(self, num_samples=1, context=None):
         # raise NotImplementedError('context is needed for forward in standardnorm')
-        return torch.randn(num_samples, *self._shape, device=self._log_z.device)
+        # return torch.randn(num_samples, *self._shape, device=self._log_z.device)
         # else:
-        # # The value of the context is ignored, only its size and device are taken into account.
-        # context_size = context.shape[0]
-        # samples = torch.randn(context_size * num_samples, *self._shape,
-        #                       device=context.device)
-        # neg_energy = -0.5 * \
-        #     sum_except_batch(samples ** 2, num_batch_dims=1)
-        # samples = split_leading_dim(samples, [context_size, num_samples])
-        # samples = torch.squeeze(samples)
-        # return samples, neg_energy - self._log_z
+        # The value of the context is ignored, only its size and device are taken into account.
+        context_size = context.shape[0]
+        samples = torch.randn(context_size * num_samples, *self._shape,
+                              device=context.device)
+        neg_energy = -0.5 * \
+            sum_except_batch(samples ** 2, num_batch_dims=1)
+        samples = split_leading_dim(samples, [context_size, num_samples])
+        samples = torch.squeeze(samples)
+        neg_energy = torch.squeeze(neg_energy)
+
+        # fix shape mismatch: [_shape] -> [1, _shape]
+        if context_size == 1 and num_samples == 1:
+            samples = samples.reshape([1, self._shape[0]])
+            neg_energy = neg_energy.reshape([1, 1])
+        return samples, neg_energy - self._log_z
 
     def _mean(self, context):
         if context is None:
