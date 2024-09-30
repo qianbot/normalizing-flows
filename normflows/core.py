@@ -293,6 +293,11 @@ class ConditionalNormalizingFlow(NormalizingFlow):
         Returns:
           Samples, log probability
         """
+        # parallelizing sampling for multiple contexts: n samples for each context 
+        if num_samples > 1 and context.size(0) > 1:
+            context = torch.repeat_interleave(context, num_samples, dim=0) # resulting in num_samples * context_size ordered interleavingly
+            num_samples = context.size(0)
+
         z, log_q = self.q0(num_samples, context=context)
         for flow in self.flows:
             z, log_det = flow(z, context=context)
